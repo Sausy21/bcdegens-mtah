@@ -1,4 +1,8 @@
-"""One command from the provided data to the submission CSV, using the rules in game_logic/rules.py.
+"""Development command: from the provided data to a labels CSV, using the rules in game_logic/rules.py.
+
+Not the team's submission command: the submitted file is made by run_josh_pipeline.py on the team
+feature table (see the main README). This script builds its own feature table from the raw tracking,
+so its output differs slightly from the submitted file.
 
     python game_logic/make_submission.py                              # -> evaluation/results/josh_v7.csv
     python game_logic/make_submission.py --out TEAM_NAME.csv

@@ -6,7 +6,7 @@ every threshold is in PARAMS with a football reason in PROVENANCE. The rulebook 
 game_logic/RULEBOOK.md; the football scenario tests are game_logic/test_rules.py.
 
 Quick start with the team's features.csv:
-    t = from_feature_table(pd.read_csv("data/derived/features.csv"), pitch=(105.3, 68.0))
+    t = from_feature_table(pd.read_csv("outputs/features.csv"), pitch=(105.3, 68.0))
     labels, info = run_pipeline(t, tag_team, graded, pitch=(105.3, 68.0))
 
 Columns the rules use (from_feature_table maps features.csv onto these names):

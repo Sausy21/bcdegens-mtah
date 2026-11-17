@@ -8,8 +8,8 @@ records the results of every label-free check run on the match.
 |---|---|
 | `game_logic/rules.py` | Implementation. Pure functions: feature table in, per-frame arrays out. |
 | `game_logic/test_rules.py` | Synthetic football scenes (no match data). Run: `python game_logic/test_rules.py` |
-| `game_logic/make_submission.py` | One command from the provided data to the submission CSV. Run: `python game_logic/make_submission.py --out TEAM_NAME.csv` |
-| `game_logic/requirements.txt` | Pinned versions used for the submission (Python 3.11.9, numpy 2.4.6, pandas 3.1.1) |
+| `game_logic/make_submission.py` | Development command: builds its own feature table from the raw tracking and runs the rules. It is not the submission command; the submitted file is made by `run_josh_pipeline.py` (see the main README). Run: `python game_logic/make_submission.py --out OUT.csv` |
+| `game_logic/requirements.txt` | Pinned versions for the scripts in this folder (Python 3.11.9, numpy 2.4.6, pandas 3.1.1) |
 | `game_logic/audit_scenes.py` | Audit of the scenes: mutation, threshold sensitivity, noise (section 11). Run: `python game_logic/audit_scenes.py` |
 
 The diagnostics in section 8 were computed in a local notebook that is not part of the repository,
@@ -52,7 +52,7 @@ Optional columns passed through for diagnostics: `graded`, `n_tracked`, `n_home_
 `n_away_within_5m`, `cx_home_m`, `cx_away_m`, `ball_speed_smooth_ms`.
 
 ```python
-t = rules.from_feature_table(pd.read_csv("data/derived/features.csv"), pitch=(105.3, 68.0))
+t = rules.from_feature_table(pd.read_csv("outputs/features.csv"), pitch=(105.3, 68.0))
 labels, info = rules.run_pipeline(t, tag_team, graded, pitch=(105.3, 68.0))
 ```
 
