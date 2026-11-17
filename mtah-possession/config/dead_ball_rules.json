@@ -1,0 +1,7 @@
+{
+  "set_piece_code": "SET PIECES",
+  "restart_motion_speed_m_s": 1.0,
+  "restart_control_radius_m": 3.0,
+  "restart_sustain_frames": 3,
+  "maximum_event_window_frames": 375
+}
