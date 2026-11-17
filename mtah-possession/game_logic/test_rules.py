@@ -190,6 +190,33 @@ def scene_short_blip_does_not_move_switch():
     return abs(first_a - m[4]) <= FPS // 2, "switch {:+.2f} s from A's first touch".format((first_a - m[4]) / FPS)
 
 
+def scene_ball_jogged_back():
+    """Ball goes out; a player jogs it back to the line at 5 m/s for 6 s, then throws it in at 12 m/s.
+    A jog is not a restart: D until the throw (+/-1 s)."""
+    t, m = scene(seg(5, LIVE_H),
+                 seg(1, LIVE_H, ball_y_m=69.5, ball_out=True, ball_speed=3.0, d_H=2.0, d_A=3.0),
+                 seg(6, LIVE_A, ball_y_m=60.0, ball_speed=5.0, s_near_A=5.0, d_A=0.5, d_H=6.0, mean_speed=1.0),
+                 seg(0.5, LIVE_A, ball_speed=12.0, d_A=3.0, d_H=6.0, mean_speed=1.5),
+                 seg(6, LIVE_A))
+    lab, _ = run(t)
+    d = np.flatnonzero(lab == "D")
+    if not len(d):
+        return False, "no D at all"
+    return abs(d[-1] + 1 - m[3]) <= FPS, "D ends {:+.2f} s from the throw".format((d[-1] + 1 - m[3]) / FPS)
+
+
+def scene_foul_ball_carried():
+    """Foul inside the pitch; the ball is carried to the spot at walking pace (1.5 m/s) for 12 s while everyone
+    walks, then the free kick. The ball is never still: at least 70% of the stoppage is D."""
+    t, m = scene(seg(5, LIVE_H),
+                 seg(12, LIVE_H, ball_speed=1.5, s_near_H=1.5, d_H=0.6, d_A=6.0, mean_speed=0.7),
+                 seg(0.5, LIVE_H, ball_speed=14.0, d_H=3.0, d_A=8.0),
+                 seg(6, LIVE_H))
+    lab, _ = run(t)
+    dshare = share(lab, m[1], m[2], "D")
+    return dshare >= 0.7, "D share of the stoppage {:.2f}".format(dshare)
+
+
 def scene_jittery_duel():
     """3 s of a tight duel where the nearest player flips team every 3 frames: no flicker."""
     rows = []
@@ -524,6 +551,8 @@ SCENES = [
     (scene_turnover_hidden_in_gap, False),
     (scene_turnover_in_gap_with_tag, False),
     (scene_short_blip_does_not_move_switch, False),
+    (scene_ball_jogged_back, False),
+    (scene_foul_ball_carried, False),
     (scene_jittery_duel, False),
     (scene_throw_in, False),
     (scene_free_kick_no_out, False),

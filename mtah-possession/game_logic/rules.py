@@ -1,9 +1,9 @@
-"""Josh's football logic: per-frame evidence functions for the possession decoder.
+﻿"""Josh's football logic: per-frame evidence functions for the possession decoder.
 
 Pure functions: a feature table in (pandas, one row per video frame, metres and m/s), per-frame
 arrays out. Nothing here reads files, and nothing refers to a specific frame or a specific match:
-every threshold is in PARAMS with a football reason in PROVENANCE. The guide, written for the team,
-is game_logic/RULES_HANDOFF.md; the football scenario tests are game_logic/test_rules.py.
+every threshold is in PARAMS with a football reason in PROVENANCE. The rulebook is
+game_logic/RULEBOOK.md; the football scenario tests are game_logic/test_rules.py.
 
 Quick start with the team's features.csv:
     t = from_feature_table(pd.read_csv("data/derived/features.csv"), pitch=(105.3, 68.0))
@@ -123,17 +123,20 @@ PROVENANCE = {
                                          "added because the keeper 6 s scene failed (test_rules.py)"),
     "RESTART_GAP_WINDOW":  ("PRIOR", "restart flight = ball at pass speed after being missing >= 2 s of the previous 3 s: "
                                      "restarts are taken out of tracking gaps. Definition written before measuring; "
-                                     "passed the pre-registered 12c test (players ~1 m/s slower before these flights)"),
+                                     "pre-registered test passed: 41/52 such flights per half, median player speed "
+                                     "before them 1.12 m/s vs 2.10 m/s before other flights (RULEBOOK.md section 8)"),
     "RESTART_GAP_MISSING": ("PRIOR", "see RESTART_GAP_WINDOW"),
     "logic: gap snap":     ("INFORMED", "player speed decides WHETHER a gap is a stoppage, events decide WHEN: it runs from "
-                                        "the ball vanishing to the restart flight. Added because SLOW_TEAM moved D% by 12 "
-                                        "points under a 20% nudge (11b) and speed has no natural cut (5b, 12c)"),
-    "logic: completed pass = control": ("PRIOR", "CHALLENGE.md proxy 'a team completes consecutive passes'; added when "
-                                                 "13b showed v5 contradicting 7.9% of completed-pass frames"),
+                                        "the ball vanishing to the restart flight. Added because a 20% change in SLOW_TEAM "
+                                        "moved the dead-ball share by 12 points and player speed has no natural cut"),
+    "logic: completed pass = control": ("PRIOR", "CHALLENGE.md proxy 'a team completes consecutive passes'; added when v5 "
+                                                 "contradicted 7.9% of completed-pass frames (0.0% after)"),
     "logic: restart stays in play":    ("PRIOR", "a restart puts the ball into play; a pass back to a thrower outside is not one. "
-                                                 "Bug found via 13b (16% of out frames labelled live), reproduced in test_rules.py"),
-    "logic: whistle detector":("REJECTED", "a sudden collective slowdown as the stoppage start: the 12c drop count kept "
-                                            "climbing with the threshold (no plateau) and rarely matched balls going out"),
+                                                 "Bug found because 16.4% of ball-out frames were labelled live (0.0% after); "
+                                                 "reproduced in test_rules.py"),
+    "logic: whistle detector":("REJECTED", "a sudden collective slowdown as the stoppage start: the count of slowdowns kept "
+                                            "climbing with the threshold (+141% / +84% per half from ratio 0.5 to 0.6, no "
+                                            "plateau) and only 11-17% coincided with the ball going out"),
     "FIRM_RADIUS_M":       ("PRIOR", "anchor: ball at the player's feet, half the everyday control radius"),
     "FIRM_MARGIN_M":       ("PRIOR", "anchor: opponent clearly further, ~3x the +/-0.7 m chance difference of two noisy distances"),
     "FIRM_FRAMES":         ("PRIOR", "anchor: CHALLENGE.md's control proxy is 'keeps the ball for a few seconds'; 1 s is the cautious end"),
@@ -489,8 +492,8 @@ def restart_team(ctrl_team, tag_team, p=PARAMS):
 
 # -- the team's feature table (Sausthava's features.csv) -----------------------------------------
 
-# his column -> the name the rules use. Speeds and centroids are the columns requested in
-# game_logic/RULES_HANDOFF.md (section 1); the rules cannot run without the three speed columns.
+# features.csv column -> the name the rules use (input table in game_logic/RULEBOOK.md, section 2).
+# The rules cannot run without the three speed columns.
 FT_COLUMNS = {
     "ball_x_m": "ball_x_m", "ball_y_m": "ball_y_m", "ball_speed_ms": "ball_speed",
     "d_nearest_home_m": "d_H", "d_nearest_away_m": "d_A",
@@ -507,14 +510,14 @@ def from_feature_table(ft, pitch, out_margin=0.5, require_speeds=True):
 
     - ball_present: ball position given; ball_out: more than out_margin past a line
     - ball_speed: his ball_speed_ms, set missing where ball_jump (> 40 m/s: tracking jump or a ball
-      in the air projected onto the ground), as the notebook's own table does
+      in the air projected onto the ground)
     - every other column is renamed (FT_COLUMNS, FT_OPTIONAL)
     With require_speeds=False, missing speed columns become NaN (for comparisons only: the rules
     need them, so run_pipeline on such a table is not meaningful).
     """
     absent = [c for c in FT_COLUMNS if c not in ft.columns and not (c in FT_SPEED_COLUMNS and not require_speeds)]
     if absent:
-        raise ValueError("feature table lacks {}; see game_logic/RULES_HANDOFF.md (section 1)".format(absent))
+        raise ValueError("feature table lacks {}; see game_logic/RULEBOOK.md (section 2)".format(absent))
     ft = ft.sort_values("frame") if "frame" in ft.columns else ft
     if "frame" in ft.columns and not np.array_equal(ft["frame"].to_numpy(), np.arange(len(ft))):
         raise ValueError("feature table frames must be 0..n-1, one row per video frame")
@@ -585,7 +588,8 @@ def tag_team_from_events(events, n_frames, home_name, away_name, exclude=(), fli
 
 # -- stand-in decoder ----------------------------------------------------------------------------
 
-def decode_simple(ev_team, ev_need, dead, restart, break_frames=None, missing=None, gap_min_frames=None):
+def decode_simple(ev_team, ev_need, dead, restart, break_frames=None, missing=None, gap_min_frames=None,
+                  trace=None):
     """Codes 0 H, 1 A, 2 D, -1 X.
 
     - Dead ball -> D, and nobody owns the ball until play restarts.
@@ -599,6 +603,9 @@ def decode_simple(ev_team, ev_need, dead, restart, break_frames=None, missing=No
       of that blind stretch (it halves the worst-case error), never later than the new team's first
       evidence. Needs `missing` (bool per frame); without it, switches stay at the first touch.
     - Loose ball, contested ball, ball missing -> the current team keeps it.
+    If `trace` is a list, one dict per switch is appended (for diagnostics): old/new team, first
+    evidence frame of the new team, last evidence frame of the old team, missing frames between
+    them, and the frame the switch was placed at.
     """
     brk = int(PARAMS["CTRL_BREAK_FRAMES"] if break_frames is None else break_frames)
     gmin = int(PARAMS["SWITCH_GAP_MIN_FRAMES"] if gap_min_frames is None else gap_min_frames)
@@ -622,11 +629,15 @@ def decode_simple(ev_team, ev_need, dead, restart, break_frames=None, missing=No
                 last_cand = i
                 cnt += 1
                 if cnt >= need:
-                    start = cand_start
+                    start, n_blind = cand_start, 0
                     if miss is not None:
                         blind = np.flatnonzero(miss[cur_seen + 1:cand_start])
-                        if len(blind) >= gmin:
+                        n_blind = len(blind)
+                        if n_blind >= gmin:
                             start = min(start, cur_seen + 1 + (blind[0] + blind[-1] + 1) // 2)
+                    if trace is not None:
+                        trace.append(dict(old=cur, new=e, first_new=cand_start, last_old=cur_seen,
+                                          blind=n_blind, placed=start))
                     out[start:i] = e
                     cur, cand, cnt, cur_seen = e, -1, 0, i
         out[i] = cur
@@ -644,7 +655,7 @@ def run_pipeline(t, tag_team, graded, pitch, p=None, disable=(), **overrides):
     p / overrides replace entries of PARAMS. disable switches off named parts (see ABLATIONS),
     for the ablation tests only.
     Returned evidence: ctrl, strength, dead_evidence, dead, restart, used_tag, events, live_guard,
-    restart_flights, snapped_gaps, anchors.
+    restart_flights, snapped_gaps, anchors, switches (one dict per possession switch).
     """
     p = {**PARAMS, **(p or {}), **overrides}
     unknown = set(disable) - set(ABLATIONS)
@@ -687,10 +698,12 @@ def run_pipeline(t, tag_team, graded, pitch, p=None, disable=(), **overrides):
     ev_need[use_tag] = int(p["TAG_TAKEOVER_FRAMES"])
 
     missing = None if "gap_midpoint" in disable else ~t["ball_present"].to_numpy(bool)
+    switches = []
     codes = decode_simple(ev_team, ev_need, dead, restart, p["CTRL_BREAK_FRAMES"], missing,
-                          p["SWITCH_GAP_MIN_FRAMES"])
+                          p["SWITCH_GAP_MIN_FRAMES"], trace=switches)
     labels = LABELS[np.where(codes < 0, 3, codes)]
     labels[~np.asarray(graded, dtype=bool)] = "X"      # outside the graded halves nothing is scored
     return labels, dict(ctrl=ctrl, strength=strength, dead_evidence=dead_ev, dead=dead,
                         restart=restart, used_tag=use_tag, events=events, live_guard=guard,
-                        restart_flights=flights, snapped_gaps=snapped, anchors=anchors(t, events, p))
+                        restart_flights=flights, snapped_gaps=snapped, anchors=anchors(t, events, p),
+                        switches=switches)
