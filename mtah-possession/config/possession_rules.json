@@ -1,0 +1,11 @@
+{
+  "control_radius_m": 2.0,
+  "opponent_margin_m": 0.5,
+  "switch_hold_frames": 10,
+  "restart_control_hold_frames": 10,
+  "dead_ball_hold_frames": 1,
+  "max_loose_frames": null,
+  "require_both_team_distances": true,
+  "initial_half_label": "D",
+  "dead_ball_feature": "dead_ball"
+}

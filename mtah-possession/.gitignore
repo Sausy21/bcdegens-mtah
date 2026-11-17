@@ -1,0 +1,38 @@
+# Restricted competition inputs and local derivatives
+data/*
+!data/README.md
+*.mp4
+*.mov
+*.mkv
+*features*.csv
+*.parquet
+*.feather
+
+# Generated submissions and evaluation artifacts
+outputs/
+evaluation/reports/
+evaluation/scoreboard.csv
+*transitions*.csv
+*diagnostics*.json
+
+# Local model artifacts
+models/
+checkpoints/
+*.joblib
+*.pkl
+*.pt
+*.pth
+
+# Python and notebook artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

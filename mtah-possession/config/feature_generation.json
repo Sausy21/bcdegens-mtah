@@ -1,0 +1,4 @@
+{
+  "speed_smoothing_window_frames": 5,
+  "jump_speed_m_s": 40.0
+}
