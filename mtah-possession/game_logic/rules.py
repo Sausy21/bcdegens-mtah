@@ -89,11 +89,11 @@ PARAMS = dict(
 #   GT-MEANING  informed by the public 5 minutes, used only to understand what a label means
 #   REJECTED    tried, failed its pre-written test, not used (kept so nobody re-adds it unknowingly)
 PROVENANCE = {
-    "JUNK_MARGIN_M":       ("INFORMED", "ball detections up to 33 m outside the pitch were seen; a real ball out of play stays within a few metres of the line"),
+    "JUNK_MARGIN_M":       ("INFORMED", "ball detections far outside the pitch were seen; a real ball out of play stays within a few metres of the line"),
     "STILL_SPEED":         ("PRIOR", "below 0.5 m/s a ball is effectively stationary"),
     "CTRL_RADIUS_M":       ("PRIOR", "a player's reach plus a stride, plus ~0.5 m point-tracking noise; team proposal"),
     "CTRL_MARGIN_M":       ("PRIOR", "two noisy distances differ by about +/-0.7 m by chance, so 'clearly closer' needs ~1 m"),
-    "CTRL_SPEED_MATCH":    ("INFORMED", "ball moving with the player; the ball-minus-player speed histogram of this match peaks within +/-1 m/s"),
+    "CTRL_SPEED_MATCH":    ("INFORMED", "ball moving with the player; the ball-minus-player speed distribution peaks near zero"),
     "TAKEOVER_FRAMES":     ("PRIOR", "team proposal: 0.4 s of control before the ball changes hands"),
     "CTRL_BREAK_FRAMES":   ("PRIOR", "team proposal: takeover needs control 'in a row'; a break over 0.5 s means two separate "
                                      "touches (CHALLENGE.md: a touch without control is no change), shorter = tracking blip"),
@@ -102,7 +102,7 @@ PROVENANCE = {
                                        "anyway, so short blips keep the switch at the first touch"),
     "TAG_TAKEOVER_FRAMES":("PRIOR", "Smart Tagging phases are coarse; 2 s before they can switch the team"),
     "GAP_TAG_FRAMES":      ("PRIOR", "beyond ~5 s without the ball, 'hold the last team' is a guess; use the tagged team"),
-    "SLOW_TEAM":           ("INFORMED", "play stopped: match median player speed 1.5 m/s, ~0.75 m/s around tagged corners (this match)"),
+    "SLOW_TEAM":           ("INFORMED", "play stopped: players walk well below their open-play speed around tagged set pieces"),
     "STOP_WINDOW":         ("INFORMED", "stoppages last several seconds, lulls are brief; added after SLOW_TEAM proved fragile"),
     "PASS_SPEED":          ("PRIOR", "a short pass is ~8 m/s or faster; no ball that fast for 2 s = nobody is playing it"),
     "RESTART_SPEED":       ("PRIOR", "a restart is a kick or throw at pass speed, not a ball carried back at jogging pace"),
@@ -123,26 +123,25 @@ PROVENANCE = {
                                          "added because the keeper 6 s scene failed (test_rules.py)"),
     "RESTART_GAP_WINDOW":  ("PRIOR", "restart flight = ball at pass speed after being missing >= 2 s of the previous 3 s: "
                                      "restarts are taken out of tracking gaps. Definition written before measuring; "
-                                     "pre-registered test passed: 41/52 such flights per half, median player speed "
-                                     "before them 1.12 m/s vs 2.10 m/s before other flights (RULEBOOK.md section 8)"),
+                                     "kept after its pre-registered check (RULEBOOK.md section 8)"),
     "RESTART_GAP_MISSING": ("PRIOR", "see RESTART_GAP_WINDOW"),
     "logic: gap snap":     ("INFORMED", "player speed decides WHETHER a gap is a stoppage, events decide WHEN: it runs from "
-                                        "the ball vanishing to the restart flight. Added because a 20% change in SLOW_TEAM "
-                                        "moved the dead-ball share by 12 points and player speed has no natural cut"),
+                                        "the ball vanishing to the restart flight. Added because SLOW_TEAM proved sensitive "
+                                        "and player speed has no natural cut"),
     "logic: completed pass = control": ("PRIOR", "CHALLENGE.md proxy 'a team completes consecutive passes'; added when v5 "
-                                                 "contradicted 7.9% of completed-pass frames (0.0% after)"),
+                                                 "labels contradicted completed passes (scene: win_and_pass_at_once)"),
     "logic: restart stays in play":    ("PRIOR", "a restart puts the ball into play; a pass back to a thrower outside is not one. "
-                                                 "Bug found because 16.4% of ball-out frames were labelled live (0.0% after); "
-                                                 "reproduced in test_rules.py"),
+                                                 "Bug found because ball-out frames were labelled live; reproduced in "
+                                                 "test_rules.py (pass_back_to_thrower, thrower_holds_ball_out)"),
     "logic: whistle detector":("REJECTED", "a sudden collective slowdown as the stoppage start: the count of slowdowns kept "
-                                            "climbing with the threshold (+141% / +84% per half from ratio 0.5 to 0.6, no "
-                                            "plateau) and only 11-17% coincided with the ball going out"),
+                                            "climbing with the threshold (no plateau, failing its pre-registered test) and "
+                                            "rarely coincided with the ball going out"),
     "FIRM_RADIUS_M":       ("PRIOR", "anchor: ball at the player's feet, half the everyday control radius"),
     "FIRM_MARGIN_M":       ("PRIOR", "anchor: opponent clearly further, ~3x the +/-0.7 m chance difference of two noisy distances"),
     "FIRM_FRAMES":         ("PRIOR", "anchor: CHALLENGE.md's control proxy is 'keeps the ball for a few seconds'; 1 s is the cautious end"),
     "logic: tag votes":         ("PRIOR", "overlapping Smart Tagging phases each vote; none overwrites another"),
     "logic: flip defensive tags":  ("PRIOR", "OVERVIEW.md: Defending/Defensive Transition name the team without the ball"),
-    "logic: ball need not be still": ("GT-MEANING", "public 5 min: the ball is 'still' in only 1.5% of D frames; it is carried, placed or thrown back"),
+    "logic: ball need not be still": ("GT-MEANING", "public 5 min: the ball is rarely still during D; it is carried, placed or thrown back"),
     "logic: restart = pass speed":   ("INFORMED", "dead stretches were too short for football; carried balls were ending them"),
 }
 
